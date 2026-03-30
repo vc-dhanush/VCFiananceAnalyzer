@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>VCFinance Analyzer</title>
+<link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0e14;--surface:#111820;--card:#161e28;--card2:#1a2332;
+  --border:rgba(0,230,160,0.13);--borderbright:rgba(0,230,160,0.32);
+  --accent:#00e6a0;--red:#ff5f6d;--amber:#ffcc44;--blue:#5bc8ff;--purple:#c07dff;
+  --text:#dff5ec;--muted:#4a7060;
+  --font:'Comic Neue',cursive;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,230,160,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,230,160,.025) 1px,transparent 1px);background-size:44px 44px;pointer-events:none;z-index:0}
+
+.wrap{position:relative;z-index:1;max-width:1120px;margin:0 auto;padding:0 24px 80px}
+
+/* HEADER */
+header{display:flex;align-items:center;justify-content:space-between;padding:28px 0 20px;border-bottom:1px solid var(--border)}
+.brand{display:flex;align-items:center;gap:14px}
+.brand-icon{width:48px;height:48px;border-radius:14px;background:var(--accent);display:grid;place-items:center;animation:pulse 3s ease-in-out infinite;flex-shrink:0}
+.brand-icon svg{width:26px;height:26px}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(0,230,160,.45)}50%{box-shadow:0 0 0 14px rgba(0,230,160,0)}}
+.brand-name{font-size:26px;font-weight:700;letter-spacing:-0.5px;line-height:1}
+.brand-name span{color:var(--accent)}
+.brand-tagline{font-size:12px;color:var(--muted);margin-top:3px}
+.header-pill{font-size:11px;background:rgba(0,230,160,.08);border:1px solid var(--borderbright);color:var(--accent);padding:6px 16px;border-radius:20px}
+
+/* UPLOAD */
+#upload-section{margin:44px 0 0;transition:opacity .4s,transform .4s}
+#upload-section.hidden{opacity:0;pointer-events:none;transform:translateY(-16px);height:0;overflow:hidden;margin:0}
+.drop-zone{display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px dashed var(--borderbright);border-radius:22px;padding:60px 32px;cursor:pointer;transition:all .3s;position:relative;overflow:hidden;background:var(--surface)}
+.drop-zone::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 110%,rgba(0,230,160,.07) 0%,transparent 65%);pointer-events:none}
+.drop-zone:hover,.drop-zone.over{border-color:var(--accent);background:rgba(0,230,160,.05)}
+.drop-icon{width:72px;height:72px;border-radius:18px;background:rgba(0,230,160,.1);border:1px solid var(--borderbright);display:grid;place-items:center;margin-bottom:22px;animation:float 4s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.drop-icon svg{width:36px;height:36px;stroke:var(--accent)}
+.drop-title{font-size:24px;font-weight:700;margin-bottom:8px}
+.drop-sub{font-size:13px;color:var(--muted);margin-bottom:26px;text-align:center;line-height:1.6}
+.btn-primary{font-family:var(--font);font-size:13px;font-weight:700;background:var(--accent);color:#060a0d;border:none;border-radius:10px;padding:13px 30px;cursor:pointer;transition:all .2s;letter-spacing:.3px}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 26px rgba(0,230,160,.32)}
+.btn-ghost{font-family:var(--font);font-size:12px;font-weight:700;background:transparent;border:1px solid var(--borderbright);color:var(--accent);border-radius:10px;padding:10px 22px;cursor:pointer;transition:all .2s}
+.btn-ghost:hover{background:rgba(0,230,160,.07)}
+#pdf-input{display:none}
+.demo-row{text-align:center;margin-top:18px}
+
+/* ERROR */
+#error-box{display:none;margin:16px 0;background:rgba(255,95,109,.1);border:1px solid rgba(255,95,109,.3);border-radius:12px;padding:14px 20px;font-size:13px;color:var(--red);line-height:1.6}
+#error-box.show{display:block}
+
+/* LOADING */
+#loading-section{display:none;flex-direction:column;align-items:center;justify-content:center;padding:80px 0;gap:20px}
+#loading-section.active{display:flex}
+.ring{width:72px;height:72px;border-radius:50%;border:3px solid rgba(0,230,160,.15);border-top-color:var(--accent);animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.load-label{font-size:13px;color:var(--accent);font-weight:700}
+.load-steps{font-size:12px;color:var(--muted);text-align:center;line-height:2}
+
+/* SECTION LABEL */
+.sec{font-size:11px;color:var(--accent);letter-spacing:2px;text-transform:uppercase;margin:40px 0 16px;display:flex;align-items:center;gap:10px;font-weight:700}
+.sec::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* DASHBOARD */
+#dashboard{display:none}
+#dashboard.active{display:block;animation:fadeup .55s ease}
+@keyframes fadeup{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
+
+/* RAW TEXT DEBUG */
+#raw-preview{display:none;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;font-size:11px;color:var(--muted);white-space:pre-wrap;max-height:200px;overflow-y:auto;margin-bottom:16px;font-family:monospace}
+
+/* METRIC CARDS */
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px}
+.mcard{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:22px;position:relative;overflow:hidden;transition:border-color .3s,transform .2s;cursor:default}
+.mcard:hover{border-color:var(--borderbright);transform:translateY(-2px)}
+.mcard-label{font-size:11px;color:var(--muted);letter-spacing:1px;margin-bottom:10px;font-weight:700}
+.mcard-val{font-size:26px;font-weight:700;line-height:1}
+.mcard-val.g{color:var(--accent)}.mcard-val.r{color:var(--red)}.mcard-val.a{color:var(--amber)}.mcard-val.b{color:var(--blue)}.mcard-val.p{color:var(--purple)}
+.mcard-sub{font-size:11px;color:var(--muted);margin-top:6px}
+.mbar-bg{margin-top:10px;height:5px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden}
+.mbar{height:100%;border-radius:3px;width:0;transition:width 1.5s cubic-bezier(.22,1,.36,1)}
+
+/* CHARTS GRID */
+.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:680px){.cgrid{grid-template-columns:1fr}}
+.ccard{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:24px;transition:border-color .3s}
+.ccard:hover{border-color:var(--borderbright)}
+.ccard.full{grid-column:1/-1}
+.ctitle{font-size:15px;font-weight:700;margin-bottom:18px}
+
+/* TAG BARS */
+.tlist{display:flex;flex-direction:column;gap:11px}
+.trow{display:flex;align-items:center;gap:10px}
+.tname{font-size:12px;min-width:130px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700}
+.tbg{flex:1;height:9px;background:rgba(255,255,255,.05);border-radius:4px;overflow:hidden}
+.tfill{height:100%;border-radius:4px;width:0;transition:width 1.3s cubic-bezier(.22,1,.36,1)}
+.tval{font-size:11px;color:var(--muted);min-width:75px;text-align:right}
+
+/* PERSON TABLE */
+.ptable{width:100%;border-collapse:collapse;font-size:13px}
+.ptable th{font-size:10px;letter-spacing:1.5px;color:var(--muted);text-align:left;padding:8px 12px;border-bottom:1px solid var(--border);text-transform:uppercase;font-weight:700}
+.ptable td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.04)}
+.ptable tr:last-child td{border-bottom:none}
+.ptable tr:hover td{background:rgba(0,230,160,.03)}
+.av{width:30px;height:30px;border-radius:50%;background:rgba(0,230,160,.12);color:var(--accent);font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;margin-right:8px;vertical-align:middle}
+.pos{color:var(--accent);font-weight:700}.neg{color:var(--red);font-weight:700}
+
+/* VERDICT */
+.vcard{border-radius:18px;padding:28px 32px;border:1px solid;position:relative;overflow:hidden}
+.vcard::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 0 50%,rgba(0,230,160,.08) 0%,transparent 60%);pointer-events:none}
+.vcard.stable{border-color:rgba(0,230,160,.3);background:rgba(0,230,160,.05)}
+.vcard.warn{border-color:rgba(255,204,68,.3);background:rgba(255,204,68,.05)}
+.vcard.danger{border-color:rgba(255,95,109,.3);background:rgba(255,95,109,.05)}
+.vtitle{font-size:22px;font-weight:700;margin-bottom:8px}
+.vsub{font-size:13px;color:var(--muted);line-height:1.75}
+.pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.pill{font-size:11px;padding:5px 13px;border-radius:20px;border:1px solid;font-weight:700}
+.pg{border-color:rgba(0,230,160,.3);background:rgba(0,230,160,.08);color:var(--accent)}
+.pr{border-color:rgba(255,95,109,.3);background:rgba(255,95,109,.08);color:var(--red)}
+.pa{border-color:rgba(255,204,68,.3);background:rgba(255,204,68,.08);color:var(--amber)}
+.pb{border-color:rgba(91,200,255,.3);background:rgba(91,200,255,.08);color:var(--blue)}
+.acts{margin-top:18px;display:flex;flex-direction:column;gap:8px}
+.act{display:flex;align-items:flex-start;gap:10px;font-size:12px;color:var(--muted);padding:8px 12px;background:rgba(255,255,255,.03);border-radius:8px;font-weight:700}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:3px}
+.dg{background:var(--accent)}.dr{background:var(--red)}.da{background:var(--amber)}
+
+/* INSIGHTS GRID */
+.igrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:0}
+.icard{background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:18px 20px}
+.icard-t{font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:700;letter-spacing:.8px;text-transform:uppercase}
+.icard-v{font-size:16px;font-weight:700}
+
+/* DONUT */
+.donut-wrap{display:flex;align-items:center;gap:28px;flex-wrap:wrap}
+.donut-legend{display:flex;flex-direction:column;gap:8px;flex:1;min-width:130px}
+.dleg-row{display:flex;align-items:center;gap:8px;font-size:12px}
+.dleg-sq{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+
+/* SCAN */
+.scan{position:fixed;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);animation:scan 5s ease-in-out infinite;opacity:.35;pointer-events:none;z-index:999}
+@keyframes scan{0%{top:0}100%{top:100vh}}
+
+/* RESET */
+#reset-btn{font-family:var(--font);font-size:12px;font-weight:700;background:transparent;border:1px solid var(--border);color:var(--muted);padding:9px 20px;border-radius:10px;cursor:pointer;transition:all .2s;margin-top:48px}
+#reset-btn:hover{border-color:var(--borderbright);color:var(--text)}
+#reset-wrap{text-align:center;display:none}
+
+/* TOP 5 SPENDERS */
+.top5{display:flex;flex-direction:column;gap:10px}
+.t5row{display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(255,255,255,.02);border-radius:10px;border:1px solid var(--border)}
+.t5rank{font-size:18px;font-weight:700;color:var(--muted);min-width:28px;text-align:center}
+.t5name{flex:1;font-size:13px;font-weight:700}
+.t5amt{font-size:13px;color:var(--red);font-weight:700}
+</style>
+</head>
+<body>
+<div class="scan"></div>
+<div class="wrap">
+
+<!-- HEADER -->
+<header>
+  <div class="brand">
+    <div class="brand-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#060a0d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
+        <polyline points="16 7 22 7 22 13"/>
+      </svg>
+    </div>
+    <div>
+      <div class="brand-name"><span>VC</span>Finance Analyzer</div>
+      <div class="brand-tagline">UPI Statement Intelligence · All processing is 100% local</div>
+    </div>
+  </div>
+  <div class="header-pill">PDF → Insights</div>
+</header>
+
+<!-- UPLOAD -->
+<div id="upload-section">
+  <label class="drop-zone" id="dropzone" for="pdf-input">
+    <div class="drop-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="12" y1="18" x2="12" y2="12"/>
+        <polyline points="9 15 12 12 15 15"/>
+      </svg>
+    </div>
+    <div class="drop-title">Drop your UPI Statement PDF</div>
+    <div class="drop-sub">GPay · PhonePe · Paytm · BHIM · Any UPI app<br/>The file never leaves your device — all parsing happens in-browser</div>
+    <button class="btn-primary" type="button" onclick="event.preventDefault();document.getElementById('pdf-input').click()">CHOOSE PDF FILE</button>
+  </label>
+  <input type="file" id="pdf-input" accept=".pdf,application/pdf"/>
+  <div id="error-box"></div>
+  <div class="demo-row">
+    <button class="btn-ghost" onclick="loadDemo()">▶ LOAD DEMO DATA</button>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div id="loading-section">
+  <div class="ring"></div>
+  <div class="load-label">PARSING YOUR PDF...</div>
+  <div class="load-steps" id="load-steps">Initializing PDF.js engine</div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+  <div id="raw-preview"></div>
+
+  <div class="sec">OVERVIEW</div>
+  <div class="metrics" id="metrics"></div>
+
+  <div class="sec">SPENDING BREAKDOWN</div>
+  <div class="cgrid">
+    <div class="ccard">
+      <div class="ctitle">Spending by Category</div>
+      <div id="spend-bars" class="tlist"></div>
+    </div>
+    <div class="ccard">
+      <div class="ctitle">Income by Category</div>
+      <div id="income-bars" class="tlist"></div>
+    </div>
+    <div class="ccard full">
+      <div class="ctitle">Spending % by Category</div>
+      <div class="donut-wrap">
+        <div style="position:relative;width:180px;height:180px;flex-shrink:0"><canvas id="donut-chart" width="180" height="180"></canvas></div>
+        <div class="donut-legend" id="donut-legend"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">PERSON FLOW</div>
+  <div class="cgrid">
+    <div class="ccard full">
+      <div class="ctitle">All People — Net Flow</div>
+      <div style="overflow-x:auto">
+        <table class="ptable" id="ptable">
+          <thead><tr><th>Person</th><th>Received (₹)</th><th>Sent (₹)</th><th>Net (₹)</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="ccard">
+      <div class="ctitle">Top 5 — Most Money Sent</div>
+      <div class="top5" id="top5"></div>
+    </div>
+    <div class="ccard">
+      <div class="ctitle">Quick Insights</div>
+      <div class="igrid" id="insights-grid"></div>
+    </div>
+  </div>
+
+  <div class="sec">FINANCIAL VERDICT</div>
+  <div id="verdict"></div>
+
+  <div id="reset-wrap">
+    <button id="reset-btn" onclick="resetApp()">↩ Analyze Another File</button>
+  </div>
+</div>
+
+</div><!-- /wrap -->
+
+<!-- PDF.js from CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+// ── PDF.js worker ───────────────────────────────────────
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+let chartInst = null;
+
+// ── FILE HANDLING ───────────────────────────────────────
+document.getElementById('pdf-input').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (f) processPDF(f);
+});
+
+const dz = document.getElementById('dropzone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('over');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type === 'application/pdf') processPDF(f);
+  else showError('Please drop a PDF file.');
+});
+
+function showError(msg) {
+  const b = document.getElementById('error-box');
+  b.textContent = '⚠ ' + msg;
+  b.classList.add('show');
+}
+function clearError() { document.getElementById('error-box').classList.remove('show'); }
+
+// ── LOADING STATE ───────────────────────────────────────
+const loadMsgs = [
+  'Initializing PDF.js engine...',
+  'Reading PDF pages...',
+  'Extracting UPI transaction text...',
+  'Splitting on UPI Ref No blocks...',
+  'Parsing amounts and persons...',
+  'Running financial analysis...',
+  'Building your dashboard...'
+];
+
+function showLoading() {
+  document.getElementById('upload-section').classList.add('hidden');
+  const ls = document.getElementById('loading-section');
+  ls.classList.add('active');
+  let i = 0;
+  const iv = setInterval(() => {
+    document.getElementById('load-steps').textContent = loadMsgs[Math.min(i, loadMsgs.length-1)];
+    i++;
+    if (i >= loadMsgs.length) clearInterval(iv);
+  }, 400);
+}
+function hideLoading() { document.getElementById('loading-section').classList.remove('active'); }
+
+// ── CORE: EXTRACT TEXT FROM PDF ─────────────────────────
+async function processPDF(file) {
+  clearError();
+  showLoading();
+  try {
+    const arrayBuf = await file.arrayBuffer();
+    const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuf }).promise;
+
+    let rawText = '';
+    for (let p = 1; p <= pdfDoc.numPages; p++) {
+      const page = await pdfDoc.getPage(p);
+      const content = await page.getTextContent();
+      // Sort items by vertical then horizontal position for correct reading order
+      const items = content.items.slice().sort((a,b) => {
+        const dy = Math.round(b.transform[5]) - Math.round(a.transform[5]);
+        return dy !== 0 ? dy : a.transform[4] - b.transform[4];
+      });
+      rawText += items.map(i => i.str).join(' ') + '\n';
+    }
+
+    if (!rawText.trim()) { showError('No text found in PDF. It may be a scanned image-based PDF.'); hideLoading(); return; }
+
+    // ── APPLY THE PYTHON LOGIC IN JS ──────────────────
+    const data = parseUPITransactions(rawText);
+
+    if (data.transactions.length === 0) {
+      // Show raw preview to help debug
+      const rp = document.getElementById('raw-preview');
+      rp.style.display = 'block';
+      rp.textContent = 'Raw text (first 2000 chars):\n' + rawText.substring(0, 2000);
+      showError('No transactions found. Your PDF format may differ. Check the raw text preview below the charts.');
+      hideLoading();
+      document.getElementById('dashboard').classList.add('active');
+      return;
+    }
+
+    const result = analyzeTransactions(data.transactions);
+    hideLoading();
+    renderDashboard(result);
+
+  } catch (err) {
+    hideLoading();
+    showError('Failed to read PDF: ' + err.message);
+  }
+}
+
+// ── PYTHON LOGIC → JS: PARSE UPI TRANSACTIONS ──────────
+// Direct port of the Python regex logic from the uploaded script
+function parseUPITransactions(rawText) {
+  const transactions = [];
+
+  // Split on "UPI Ref No" just like Python: raw_text.split("UPI Ref No")
+  const blocks = rawText.split(/UPI Ref No\.?/i);
+
+  for (let i = 1; i < blocks.length; i++) {   // skip index 0 = header
+    const txn = blocks[i];
+    let person = '', txnType = '', amount = 0, tag = 'Unknown';
+
+    try {
+      // ── TYPE + PERSON (matches Python regexes) ──
+      if (/Paid to|Money sent to/i.test(txn)) {
+        txnType = 'sent';
+        const m = txn.match(/(?:Paid to|Money sent to)\s+(.+?)(?=\s*Rs\.|\s*₹|\n|$)/i);
+        if (m) person = m[1].trim().split(/\n/)[0].trim();
+      } else if (/Received from/i.test(txn)) {
+        txnType = 'received';
+        const m = txn.match(/Received from\s+(.+?)(?=\s*Rs\.|\s*₹|\n|$)/i);
+        if (m) person = m[1].trim().split(/\n/)[0].trim();
+      } else {
+        // Fallback patterns for different PDF formats
+        if (/Debit|Debited|sent|paid/i.test(txn)) txnType = 'sent';
+        else if (/Credit|Credited|received/i.test(txn)) txnType = 'received';
+
+        // Try to grab a name-like token
+        const nm = txn.match(/(?:To|From)\s+([A-Za-z][A-Za-z\s]{2,30})/i);
+        if (nm) person = nm[1].trim();
+      }
+
+      if (!person) {
+        // Last-resort: grab first capitalised name-looking string
+        const fb = txn.match(/([A-Z][a-z]+(?:\s[A-Z][a-z]+)+)/);
+        if (fb) person = fb[1].trim();
+      }
+      if (!person) continue;
+
+      // Clean person name (title-case, trim whitespace noise)
+      person = person.replace(/\s+/g, ' ').trim();
+      person = person.replace(/[^a-zA-Z\s]/g, '').trim();
+      if (!person || person.length < 2) continue;
+      person = toTitleCase(person);
+
+      // ── AMOUNT: Rs.X,XXX or ₹X,XXX ──
+      let amtMatch = txn.match(/Rs\.?\s*([\d,]+(?:\.\d{1,2})?)/i);
+      if (!amtMatch) amtMatch = txn.match(/₹\s*([\d,]+(?:\.\d{1,2})?)/);
+      if (!amtMatch) continue;
+
+      amount = parseFloat(amtMatch[1].replace(/,/g, ''));
+      if (isNaN(amount) || amount <= 0) continue;
+      if (txnType === 'sent') amount = -amount;
+
+      // ── TAG: "Tag: #Food" pattern ──
+      const tagMatch = txn.match(/Tag:\s*#?([^\n\r,]+)/i);
+      if (tagMatch) tag = toTitleCase(tagMatch[1].trim());
+      else {
+        // Infer tag from keywords in transaction text
+        tag = inferTag(txn, txnType);
+      }
+
+      transactions.push({ person, amount, tag, type: txnType });
+
+    } catch (e) {
+      continue; // skip bad blocks, same as Python
+    }
+  }
+
+  return { transactions, rawText };
+}
+
+function inferTag(txn, type) {
+  const t = txn.toLowerCase();
+  if (/zomato|swiggy|food|restaurant|cafe|barbeque|domino|pizza|biryani/.test(t)) return 'Food & Dining';
+  if (/bigbasket|grocer|vegetable|milk|dairy|kirana|super\s?market/.test(t)) return 'Groceries';
+  if (/ola|uber|auto|cab|metro|bus|train|irctc|travel|fuel|petrol/.test(t)) return 'Transport';
+  if (/netflix|prime|hotstar|spotify|movie|theatre|game|entertainment/.test(t)) return 'Entertainment';
+  if (/electricity|water|gas|broadband|internet|airtel|jio|vi\b|recharge|bill/.test(t)) return 'Utilities';
+  if (/amazon|flipkart|myntra|shop|cloth|shoes|mall/.test(t)) return 'Shopping';
+  if (/rent|pg\b|hostel|landlord/.test(t)) return 'Rent';
+  if (/salary|stipend|payroll/.test(t)) return 'Salary';
+  if (/freelance|project|client|work/.test(t)) return 'Freelance';
+  if (/mutual fund|stock|invest|zerodha|groww|sip/.test(t)) return 'Investment';
+  if (/refund|cashback/.test(t)) return 'Refund';
+  if (type === 'sent') return 'Transfer';
+  return 'Transfer';
+}
+
+function toTitleCase(s) {
+  return s.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+}
+
+// ── ANALYSE: port of Python steps 4–12 ─────────────────
+function analyzeTransactions(txns) {
+  const totalReceived = txns.filter(t => t.amount > 0).reduce((s,t) => s+t.amount, 0);
+  const totalSpent = Math.abs(txns.filter(t => t.amount < 0).reduce((s,t) => s+t.amount, 0));
+  const net = totalReceived - totalSpent;
+  const savingsRate = totalReceived > 0 ? (net / totalReceived * 100) : 0;
+
+  // Tag overall
+  const tagOverall = {};
+  txns.forEach(t => { tagOverall[t.tag] = (tagOverall[t.tag]||0) + t.amount; });
+
+  // Tag spend / income
+  const tagSpend = {}, tagIncome = {};
+  txns.forEach(t => {
+    if (t.amount < 0) tagSpend[t.tag] = (tagSpend[t.tag]||0) + Math.abs(t.amount);
+    else tagIncome[t.tag] = (tagIncome[t.tag]||0) + t.amount;
+  });
+
+  // Tag spend % (same as Python step 10)
+  const tagPct = {};
+  if (totalSpent > 0)
+    Object.entries(tagSpend).forEach(([k,v]) => { tagPct[k] = (v/totalSpent*100); });
+
+  // Person table (step 8)
+  const pMap = {};
+  txns.forEach(t => {
+    if (!pMap[t.person]) pMap[t.person] = { received:0, sent:0 };
+    if (t.amount > 0) pMap[t.person].received += t.amount;
+    else pMap[t.person].sent += Math.abs(t.amount);
+  });
+  const persons = Object.entries(pMap).map(([name,v]) => ({
+    name, received:v.received, sent:v.sent, net: v.received - v.sent
+  })).sort((a,b) => b.net - a.net);
+
+  // Top 5 spenders (step 9)
+  const top5 = persons.slice().sort((a,b) => b.sent - a.sent).slice(0,5);
+
+  // Insights (step 11)
+  const highestSpendCat = Object.entries(tagSpend).sort((a,b)=>b[1]-a[1])[0];
+  const highestIncomeCat = Object.entries(tagIncome).sort((a,b)=>b[1]-a[1])[0];
+
+  // Negative people (step 12 style)
+  const drainers = persons.filter(p => p.net < 0).slice(0,3);
+
+  return {
+    txns, totalReceived, totalSpent, net, savingsRate,
+    tagSpend, tagIncome, tagPct, tagOverall,
+    persons, top5, drainers,
+    highestSpendCat: highestSpendCat ? highestSpendCat[0] : '—',
+    highestIncomeCat: highestIncomeCat ? highestIncomeCat[0] : '—',
+    txnCount: txns.length
+  };
+}
+
+// ── RENDER ──────────────────────────────────────────────
+function renderDashboard(d) {
+  document.getElementById('dashboard').classList.add('active');
+  document.getElementById('reset-wrap').style.display = 'block';
+
+  renderMetrics(d);
+  renderTagBars(d);
+  renderDonut(d);
+  renderPersonTable(d);
+  renderTop5(d);
+  renderInsights(d);
+  renderVerdict(d);
+
+  setTimeout(() => animateBars(), 200);
+}
+
+const fmt = n => '₹' + Math.round(Math.abs(n)).toLocaleString('en-IN');
+const pct = n => Math.round(n) + '%';
+
+function renderMetrics(d) {
+  const savCls = d.savingsRate >= 30 ? 'g' : d.savingsRate >= 15 ? 'a' : 'r';
+  const netCls = d.net >= 0 ? 'g' : 'r';
+  const cards = [
+    {label:'TOTAL INCOME', val:fmt(d.totalReceived), cls:'g', sub:`from ${d.txns.filter(t=>t.amount>0).length} credits`},
+    {label:'TOTAL SPENT', val:fmt(d.totalSpent), cls:'r', sub:`across ${d.txns.filter(t=>t.amount<0).length} debits`},
+    {label:'NET BALANCE', val:(d.net>=0?'+':'-')+fmt(d.net), cls:netCls, sub:d.net>=0?'Surplus ✓':'Deficit ✗'},
+    {label:'SAVINGS RATE', val:pct(d.savingsRate), cls:savCls, sub:'of total income'},
+    {label:'TRANSACTIONS', val:d.txnCount, cls:'b', sub:'total UPI entries'},
+    {label:'TOP SPEND', val:d.highestSpendCat, cls:'p', sub:'highest category', sm:true},
+  ];
+  document.getElementById('metrics').innerHTML = cards.map(c => `
+    <div class="mcard">
+      <div class="mcard-label">${c.label}</div>
+      <div class="mcard-val ${c.cls}" style="${c.sm?'font-size:16px':''}">${c.val}</div>
+      <div class="mcard-sub">${c.sub}</div>
+      <div class="mbar-bg"><div class="mbar" style="background:${c.cls==='g'?'var(--accent)':c.cls==='r'?'var(--red)':c.cls==='a'?'var(--amber)':'var(--blue)'}"></div></div>
+    </div>`).join('');
+
+  setTimeout(() => {
+    document.querySelectorAll('.mbar').forEach((bar,i) => {
+      const vals = [
+        Math.min(100, d.totalReceived/Math.max(d.totalReceived,d.totalSpent)*100),
+        Math.min(100, d.totalSpent/Math.max(d.totalReceived,d.totalSpent)*100),
+        Math.min(100, Math.abs(d.savingsRate)),
+        Math.min(100, Math.abs(d.savingsRate)),
+        Math.min(100, d.txnCount/5),
+        60
+      ];
+      setTimeout(() => bar.style.width = (vals[i]||50) + '%', i*80+200);
+    });
+  }, 100);
+}
+
+const COLORS_SPEND = ['#ff5f6d','#ffd166','#ff9f43','#fd79a8','#e17055','#d63031','#ff6348','#ff4757'];
+const COLORS_INC = ['#00e6a0','#5bc8ff','#55efc4','#0984e3','#00cec9','#6c5ce7','#74b9ff','#a29bfe'];
+
+function renderTagBars(d) {
+  const se = Object.entries(d.tagSpend).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const ie = Object.entries(d.tagIncome).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const ms = se[0]?.[1]||1, mi = ie[0]?.[1]||1;
+
+  document.getElementById('spend-bars').innerHTML = se.map(([tag,val],i)=>`
+    <div class="trow">
+      <div class="tname" title="${tag}">${tag}</div>
+      <div class="tbg"><div class="tfill" data-pct="${val/ms*100}" style="background:${COLORS_SPEND[i%COLORS_SPEND.length]}"></div></div>
+      <div class="tval">${fmt(val)}</div>
+    </div>`).join('') || '<div style="color:var(--muted);font-size:13px">No spending data found</div>';
+
+  document.getElementById('income-bars').innerHTML = ie.map(([tag,val],i)=>`
+    <div class="trow">
+      <div class="tname" title="${tag}">${tag}</div>
+      <div class="tbg"><div class="tfill" data-pct="${val/mi*100}" style="background:${COLORS_INC[i%COLORS_INC.length]}"></div></div>
+      <div class="tval">${fmt(val)}</div>
+    </div>`).join('') || '<div style="color:var(--muted);font-size:13px">No income data found</div>';
+}
+
+function animateBars() {
+  document.querySelectorAll('.tfill').forEach((bar,i) => {
+    setTimeout(() => bar.style.width = (bar.dataset.pct||0) + '%', i*55);
+  });
+}
+
+function renderDonut(d) {
+  if (chartInst) { chartInst.destroy(); chartInst = null; }
+  const entries = Object.entries(d.tagSpend).sort((a,b)=>b[1]-a[1]).slice(0,7);
+  if (!entries.length) return;
+
+  const ctx = document.getElementById('donut-chart').getContext('2d');
+  chartInst = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: entries.map(e=>e[0]),
+      datasets: [{ data: entries.map(e=>e[1]), backgroundColor: COLORS_SPEND.slice(0,entries.length), borderWidth: 2, borderColor: '#111820' }]
+    },
+    options: {
+      responsive: false,
+      plugins: { legend: { display: false }, tooltip: {
+        backgroundColor:'#161e28', borderColor:'rgba(0,230,160,.3)', borderWidth:1,
+        titleColor:'#00e6a0', bodyColor:'#dff5ec',
+        callbacks: { label: c => ' ' + fmt(c.raw) + ' (' + Math.round(c.raw/d.totalSpent*100) + '%)' }
+      }},
+      cutout: '65%'
+    }
+  });
+
+  const legendEl = document.getElementById('donut-legend');
+  legendEl.innerHTML = entries.map(([tag,val],i) => `
+    <div class="dleg-row">
+      <div class="dleg-sq" style="background:${COLORS_SPEND[i%COLORS_SPEND.length]}"></div>
+      <span style="font-size:12px;font-weight:700">${tag}</span>
+      <span style="font-size:11px;color:var(--muted);margin-left:auto">${pct(val/d.totalSpent*100)}</span>
+    </div>`).join('');
+}
+
+function renderPersonTable(d) {
+  const tb = document.querySelector('#ptable tbody');
+  tb.innerHTML = d.persons.map(p => {
+    const init = p.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+    const nc = p.net>=0 ? 'pos' : 'neg';
+    const sign = p.net>=0 ? '+' : '-';
+    return `<tr>
+      <td><span class="av">${init}</span>${p.name}</td>
+      <td style="color:var(--accent)">${p.received > 0 ? fmt(p.received) : '—'}</td>
+      <td style="color:var(--red)">${p.sent > 0 ? fmt(p.sent) : '—'}</td>
+      <td class="${nc}">${sign}${fmt(Math.abs(p.net))}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="4" style="color:var(--muted);padding:16px">No person data extracted</td></tr>';
+}
+
+function renderTop5(d) {
+  const medals = ['🥇','🥈','🥉','4','5'];
+  document.getElementById('top5').innerHTML = d.top5.map((p,i) => `
+    <div class="t5row">
+      <div class="t5rank">${medals[i]}</div>
+      <div class="t5name">${p.name}</div>
+      <div class="t5amt">${fmt(p.sent)}</div>
+    </div>`).join('') || '<div style="color:var(--muted);font-size:13px">No data</div>';
+}
+
+function renderInsights(d) {
+  const ig = document.getElementById('insights-grid');
+  const items = [
+    { t: 'HIGHEST SPEND CATEGORY', v: d.highestSpendCat, cls: 'r' },
+    { t: 'HIGHEST INCOME SOURCE', v: d.highestIncomeCat, cls: 'g' },
+    { t: 'SAVINGS RATE', v: pct(d.savingsRate), cls: d.savingsRate>=30?'g':d.savingsRate>=15?'a':'r' },
+    { t: 'IDEAL SAVINGS (30%)', v: fmt(d.totalReceived*0.3), cls: 'a' },
+    { t: 'PEOPLE WHO OWE YOU', v: d.persons.filter(p=>p.net>0).length + ' people', cls: 'b' },
+    { t: 'PEOPLE YOU OWE', v: d.persons.filter(p=>p.net<0).length + ' people', cls: 'r' },
+  ];
+  ig.innerHTML = items.map(it => `
+    <div class="icard">
+      <div class="icard-t">${it.t}</div>
+      <div class="icard-v" style="color:${it.cls==='g'?'var(--accent)':it.cls==='r'?'var(--red)':it.cls==='a'?'var(--amber)':'var(--blue)'}">${it.v}</div>
+    </div>`).join('');
+}
+
+function renderVerdict(d) {
+  let cls, title, msg;
+  if (d.net < 0) {
+    cls='danger'; title='🚨 Financially Unstable';
+    msg=`Running a deficit of ${fmt(Math.abs(d.net))}. Your spending exceeds income. Immediate correction needed.`;
+  } else if (d.savingsRate < 20) {
+    cls='warn'; title='⚠️ Surviving, Not Growing';
+    msg=`Savings rate is ${pct(d.savingsRate)} — below the recommended 30%. You are spending too much relative to income.`;
+  } else {
+    cls='stable'; title='✅ Financially Stable';
+    msg=`Savings rate of ${pct(d.savingsRate)} is healthy. Net surplus of ${fmt(d.net)}. Keep building on this momentum.`;
+  }
+
+  const ideal = Math.round(d.totalReceived*0.3);
+  const actions = [
+    { dot:'da', text:`Target savings (30% rule): ${fmt(ideal)}` },
+    { dot: d.net < ideal ? 'dr' : 'dg', text: `Current savings: ${fmt(d.net)} — ${d.net < ideal ? 'below target ✗' : 'above target ✓'}` },
+    { dot:'da', text:`Top spend category: ${d.highestSpendCat} — review weekly` },
+    { dot:'dg', text:`Top income source: ${d.highestIncomeCat} — maintain & grow` },
+    ...(d.drainers.length ? [{ dot:'dr', text:`Money drainers: ${d.drainers.map(p=>p.name).join(', ')} — reduce dependency` }] : []),
+    { dot: d.totalReceived>50000 ? 'dg' : 'da', text: d.totalReceived>50000 ? 'Consider health insurance (₹5–10L cover) + term life' : 'Build emergency fund of ₹5,000–₹10,000 minimum first' },
+    ...(d.txnCount > 300 ? [{ dot:'dr', text:'High transaction count — possible impulse spending habit' }] : []),
+  ];
+
+  const pillCls = d.net >= 0 ? 'pg' : 'pr';
+  const savPill = d.savingsRate>=30?'pg':d.savingsRate>=15?'pa':'pr';
+
+  document.getElementById('verdict').innerHTML = `
+    <div class="vcard ${cls}">
+      <div class="vtitle">${title}</div>
+      <div class="vsub">${msg}</div>
+      <div class="pills">
+        <span class="pill ${pillCls}">Net: ${fmt(d.net)}</span>
+        <span class="pill ${savPill}">Savings: ${pct(d.savingsRate)}</span>
+        <span class="pill pb">${d.txnCount} transactions</span>
+        <span class="pill pa">Income: ${fmt(d.totalReceived)}</span>
+        <span class="pill pr">Spent: ${fmt(d.totalSpent)}</span>
+      </div>
+      <div class="acts">
+        ${actions.map(a=>`<div class="act"><div class="dot ${a.dot}"></div>${a.text}</div>`).join('')}
+      </div>
+    </div>`;
+}
+
+// ── RESET ───────────────────────────────────────────────
+function resetApp() {
+  document.getElementById('dashboard').classList.remove('active');
+  document.getElementById('upload-section').classList.remove('hidden');
+  document.getElementById('reset-wrap').style.display = 'none';
+  document.getElementById('pdf-input').value = '';
+  document.getElementById('raw-preview').style.display = 'none';
+  clearError();
+  if (chartInst) { chartInst.destroy(); chartInst = null; }
+}
+
+// ── DEMO DATA ────────────────────────────────────────────
+function loadDemo() {
+  clearError();
+  showLoading();
+  setTimeout(() => {
+    const fakeTxns = [
+      {person:'Rahul Sharma', amount:-850, tag:'Food & Dining', type:'sent'},
+      {person:'Priya Singh', amount:45000, tag:'Salary', type:'received'},
+      {person:'Zomato', amount:-320, tag:'Food & Dining', type:'sent'},
+      {person:'Swiggy', amount:-450, tag:'Food & Dining', type:'sent'},
+      {person:'Amazon Pay', amount:-2300, tag:'Shopping', type:'sent'},
+      {person:'Flipkart', amount:-1800, tag:'Shopping', type:'sent'},
+      {person:'Ola Cabs', amount:-180, tag:'Transport', type:'sent'},
+      {person:'Uber', amount:-220, tag:'Transport', type:'sent'},
+      {person:'Airtel', amount:-399, tag:'Utilities', type:'sent'},
+      {person:'BigBasket', amount:-1200, tag:'Groceries', type:'sent'},
+      {person:'Reliance Fresh', amount:-680, tag:'Groceries', type:'sent'},
+      {person:'Amit Kumar', amount:5000, tag:'Freelance', type:'received'},
+      {person:'Netflix', amount:-649, tag:'Entertainment', type:'sent'},
+      {person:'Spotify', amount:-119, tag:'Entertainment', type:'sent'},
+      {person:'Landlord Ramesh', amount:-15000, tag:'Rent', type:'sent'},
+      {person:'Neha Gupta', amount:-2000, tag:'Transfer', type:'sent'},
+      {person:'Vijay Reddy', amount:1500, tag:'Transfer', type:'received'},
+      {person:'SBI Electricity', amount:-850, tag:'Utilities', type:'sent'},
+      {person:'Groww Mutual Fund', amount:-3000, tag:'Investment', type:'sent'},
+      {person:'Sunita Rao', amount:-500, tag:'Transfer', type:'sent'},
+      {person:'Kiran Mehta', amount:2000, tag:'Refund', type:'received'},
+      {person:'Deepak Joshi', amount:-1200, tag:'Food & Dining', type:'sent'},
+      {person:'IRCTC', amount:-1450, tag:'Transport', type:'sent'},
+      {person:'PVR Cinemas', amount:-680, tag:'Entertainment', type:'sent'},
+      {person:'Ananya Nair', amount:3000, tag:'Freelance', type:'received'},
+      {person:'Rohit Patel', amount:-800, tag:'Transfer', type:'sent'},
+    ];
+    const result = analyzeTransactions(fakeTxns);
+    hideLoading();
+    renderDashboard(result);
+  }, 2200);
+}
+</script>
+</body>
+</html>
